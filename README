@@ -1,0 +1,135 @@
+This README file contains information on the contents of the meta-iwd layer.
+
+
+This is to reproduce a race condition within wcn36xx driver
+
+clone this repo
+clone meta-qcom
+clone meta-openembedded
+
+You will need to add those to your bblayers.conf,
+
+e.g.
+
+
+BBLAYERS ?= " \
+  /home/juser/poky/meta \
+  /home/juser/poky/meta-poky \
+  /home/juser/poky/meta-yocto-bsp \
+  /home/juser/meta-qcom \
+  /home/juser/meta-openembedded/meta-oe \
+  /home/juser/meta-iwd \
+  "
+
+also, add those lines to your conf/local.conf
+
+
+MACHINE = "dragonboard-410c"
+DISTRO_FEATURES_append = " systemd "
+DISTRO_FEATURES_BACKFILL_CONSIDERED = " sysvinit "
+VIRTUAL-RUNTIME_init_manager = "systemd"
+VIRTUAL-RUNTIME_initscripts = ""
+IMAGE_FSTYPES += " ext4 "
+IMAGE_INSTALL_append = " iwd trigger "
+
+run "bitbake core-image-minimal"
+
+get the "latest" bootloaders: https://releases.linaro.org/96boards/dragonboard410c/linaro/rescue/20.02/dragonboard-410c-bootloader-emmc-linux-137.zip
+
+unzip and run the flashall there.
+
+go to your builddir and there to tmp/deploy/images/dragonboard-410c
+
+run "sudo fastboot flash boot boot-dragonboard-410c.img"
+run "sudo fastboot flash rootfs core-image-minimal-dragonboard-410c.ext4"
+
+reset the board. You should get a dump similar to this
+
+[    5.059569] remoteproc remoteproc0: powering up 4080000.remoteproc
+[    5.063379] remoteproc remoteproc0: Booting fw image qcom/msm8916/mba.mbn, size 230272
+[    5.115285] qcom-q6v5-mss 4080000.remoteproc: MBA booted, loading mpss
+[    5.384420] remoteproc remoteproc0: remote processor 4080000.remoteproc is now up
+[    5.863405] wcn36xx: mac address: 02:00:c7:c2:bd:a9
+         Starting Load/Save RF Kill Switch Status...
+[    6.144062] wcn36xx: firmware WLAN version 'WCN v2.0 RadioPhy vRhea_GF_1.12 with 19.2MHz XO' and CRM version 'CNSS-PR-2-0-1-2-c1-74-130449-3'
+[    6.144096] wcn36xx: firmware API 1.5.1.2, 41 stations, 2 bssids
+[    6.191156] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000000
+[    6.191181] Mem abort info:
+[    6.198988]   ESR = 0x96000004
+[    6.201508]   EC = 0x25: DABT (current EL), IL = 32 bits
+[    6.204634]   SET = 0, FnV = 0
+[    6.210099]   EA = 0, S1PTW = 0
+[    6.212964] Data abort info:
+[    6.216002]   ISV = 0, ISS = 0x00000004
+[    6.219128]   CM = 0, WnR = 0
+[    6.222688] user pgtable: 4k pages, 48-bit VAs, pgdp=00000000f9247000
+[    6.225817] [0000000000000000] pgd=0000000000000000
+[    6.232239] Internal error: Oops: 96000004 [#1] PREEMPT SMP
+[    6.236926] Modules linked in: wcn36xx(+) qrtr_smd cp210x aes_neon_blk crct10dif_ce qcom_wcnss_pil qrtr qcom_q6v5_mss mdt_loader qcom_sysmon qcom_q6v5 qmi_helpers qcom_common qcom_glink_smem rtc_pm8xxx qcom_rng socinfo rmtfs_mem rpmsg_char sch_fq_codel
+[    6.242824] CPU: 1 PID: 239 Comm: iwd Not tainted 5.4.23+linaro #1
+[    6.252933] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000000
+[    6.265054] Hardware name: Qualcomm Technologies, Inc. APQ 8016 SBC (DT)
+[    6.271046] Mem abort info:
+[    6.279985] pstate: a0000085 (NzCv daIf -PAN -UAO)
+[    6.286662]   ESR = 0x96000004
+[    6.289189] pc : __queue_work+0x90/0x378
+[    6.294041]   EC = 0x25: DABT (current EL), IL = 32 bits
+[    6.297083] lr : __queue_work+0x8c/0x378
+[    6.301162]   SET = 0, FnV = 0
+[    6.306455] sp : ffff800011eb3630
+[    6.310360]   EA = 0, S1PTW = 0
+[    6.313225] x29: ffff800011eb3630 x28: ffff00000eb0c000 
+[    6.316610] Data abort info:
+[    6.319565] x27: 0000000000000001 x26: ffff800011b93940 
+[    6.325117]   ISV = 0, ISS = 0x00000004
+[    6.327985] x25: ffff8000119698e0 x24: 0000000000000100 
+[    6.333278]   CM = 0, WnR = 0
+[    6.336839] x23: 0000000000000017 x22: ffff000079fbd000 
+[    6.342393] user pgtable: 4k pages, 48-bit VAs, pgdp=00000000f90a8000
+[    6.345260] x21: ffff80001154b018 x20: ffff000076f40c90 
+[    6.350643] [0000000000000000] pgd=0000000000000000
+[    6.356978] x19: 0000000000000000 x18: 0000000000000000 
+[    6.366959] x17: 0000000000000000 x16: 0000000000000000 
+[    6.372515] x15: 0000000000000000 x14: 0000000000000000 
+[    6.377810] x13: 0000000000000000 x12: 0000000000000000 
+[    6.383105] x11: 0000000000000000 x10: 0000000000000040 
+[    6.388401] x9 : ffff800011980750 x8 : ffff800011980748 
+[    6.393696] x7 : ffff00007b000068 x6 : 0000000000000000 
+[    6.394975] random: crng init done
+[    6.398990] x5 : ffff00007b000000 x4 : 0000000000000000 
+[    6.398995] x3 : 0000000000000000 x2 : 0000000000000000 
+[    6.398999] x1 : 0000000000000008 x0 : ffff00000eb0c000 
+[    6.404293] random: 7 urandom warning(s) missed due to ratelimiting
+[    6.407498] Call trace:
+[    6.407504]  __queue_work+0x90/0x378
+[    6.407509]  queue_work_on+0x70/0x90
+[    6.407515]  ieee80211_queue_work+0x30/0x48
+[    6.407520]  ieee80211_set_multicast_list+0x8c/0xe0
+[    6.407526]  __dev_set_rx_mode+0x50/0x90
+[    6.407529]  dev_set_rx_mode+0x24/0x38
+[    6.407535]  __dev_change_flags+0x8c/0x1b8
+[    6.455849]  dev_change_flags+0x20/0x60
+[    6.459929]  do_setlink+0x5b0/0xbd0
+[    6.463661]  rtnl_setlink+0xdc/0x158
+[    6.467134]  rtnetlink_rcv_msg+0x11c/0x368
+[    6.470955]  netlink_rcv_skb+0x54/0x110
+[    6.474860]  rtnetlink_rcv+0x14/0x20
+[    6.478592]  netlink_unicast+0x174/0x200
+[    6.482413]  netlink_sendmsg+0x184/0x328
+[    6.486320]  __sys_sendto+0xd4/0x148
+[    6.490225]  __arm64_sys_sendto+0x24/0x30
+[    6.493786]  el0_svc_common.constprop.0+0x68/0x160
+[    6.497691]  el0_svc_handler+0x20/0x80
+[    6.502377]  el0_svc+0x8/0xc
+[    6.506112] Code: 8b010273 aa1403e0 97fffab4 aa0003fc (f9400261) 
+[    6.509156] ---[ end trace 1cac0e340837b824 ]---
+[    6.515138] Kernel panic - not syncing: Fatal exception in interrupt
+[    6.519829] SMP: stopping secondary CPUs
+[    7.567829] SMP: failed to stop secondary CPUs 0-1
+[    7.567842] Kernel Offset: disabled
+[    7.571491] CPU features: 0x0002,24002005
+[    7.574876] Memory Limit: none
+[    7.579054] ---[ end Kernel panic - not syncing: Fatal exception in interrupt ]---
+
+
+What is done in meta-iwd? I added iwd and ell (ell dependency of iwd), removed unneeded kernel options for our project (i.e. bluetooth, vga) and added a small script, that enables ap mode as soon as wlan0 device appears. That is what the wifimanager would do in a more sophisticated way on the real project.

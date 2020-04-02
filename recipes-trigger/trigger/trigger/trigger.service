@@ -1,0 +1,11 @@
+[Unit]
+Description=start ap mode to freak out the driver
+After=network.target iwd.service
+Requires=network.target iwd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/trigger.sh
+
+[Install]
+WantedBy=multi-user.target
